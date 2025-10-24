@@ -34,7 +34,7 @@ jobs:
       - run: flutter pub get
 
       # 建置 Web（canvaskit 較穩；若想更小可改 auto）
-      - run: flutter build web --release --web-renderer canvaskit
+      - run: flutter build web --release
 
       # 確認 build/web 存在，避免模糊的 exit code 64
       - name: Verify build output
