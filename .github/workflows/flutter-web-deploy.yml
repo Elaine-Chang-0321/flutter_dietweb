@@ -3,23 +3,51 @@ on:
   push:
     branches: [ main ]
 
+# 讓 workflow 可以建立/更新 deploy 分支
+permissions:
+  contents: write
+
+# 同一時間只跑一個部署
+concurrency:
+  group: flutter-web-deploy
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
+      # 裝 Flutter（鎖你本機版本，避免未來升級造成不一致）
       - uses: subosito/flutter-action@v2
         with:
-          channel: 'stable'
+          flutter-version: '3.35.7'
 
+      # 檢查目錄確實有 pubspec.yaml
+      - name: Verify repo layout
+        run: |
+          pwd
+          ls -la
+          test -f pubspec.yaml || (echo "ERROR: pubspec.yaml not found at repo root"; exit 1)
+
+      - run: flutter --version
       - run: flutter pub get
+
+      # 建置 Web（canvaskit 較穩；若想更小可改 auto）
       - run: flutter build web --release --web-renderer canvaskit
 
-      # 將打包結果發佈到 deploy 分支
+      # 確認 build/web 存在，避免模糊的 exit code 64
+      - name: Verify build output
+        run: |
+          test -d build/web || (echo "ERROR: build/web not found"; exit 1)
+          ls -la build/web | head -n 50
+
+      # 發佈到 deploy 分支
       - name: Publish to deploy branch
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: deploy
           publish_dir: build/web
+          # 第一次建立 deploy 分支時更穩
+          force_orphan: true
