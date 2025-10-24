@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class GoalCard extends StatefulWidget {
   final int index;
   final String title;
   final int current;
   final int goal;
-  final Color backgroundColor;
+  final Color? backgroundColor; // Make background color optional
 
   const GoalCard({
     Key? key,
@@ -13,7 +14,7 @@ class GoalCard extends StatefulWidget {
     required this.title,
     required this.current,
     required this.goal,
-    required this.backgroundColor,
+    this.backgroundColor, // Make background color optional
   }) : super(key: key);
 
   @override
@@ -27,16 +28,47 @@ class _GoalCardState extends State<GoalCard> {
   Widget build(BuildContext context) {
     final bool isMobile = MediaQuery.of(context).size.width < 600;
 
+    // Define background colors based on title
+    Color cardBackgroundColor;
+    Color textColor;
+    Color progressBackgroundColor;
+
+    switch (widget.title) {
+      case 'Whole Grains':
+        cardBackgroundColor = const Color(0xFFF5E8CF); // 里昂米白
+        textColor = Colors.black87; // Dark text for light background
+        progressBackgroundColor = const Color(0xFF16A34A); // Green
+        break;
+      case 'Protein':
+        cardBackgroundColor = const Color(0xFFEFC3BD); // 貴婦粉紅
+        textColor = Colors.black87; // Dark text for light background
+        progressBackgroundColor = const Color(0xFF16A34A); // Green
+        break;
+      case 'Vegetables':
+        cardBackgroundColor = const Color(0xFFEEE2D3); // 新的背景色
+        textColor = const Color(0xFF000000); // 純黑色
+        progressBackgroundColor = const Color(0xFF16A34A); // Green
+        break;
+      case 'Junk Food':
+        cardBackgroundColor = const Color(0xFFDED3D6); // 高貴黏土
+        textColor = Colors.black87; // Dark text for light background
+        progressBackgroundColor = const Color(0xFFEF4444); // Red
+        break;
+      default:
+        cardBackgroundColor = widget.backgroundColor ?? const Color(0xFFE0E0E0); // Fallback to a default grey if not matched and original is null
+        textColor = const Color(0xFF111827);
+        progressBackgroundColor = const Color(0xFF16A34A);
+    }
+
     // Calculate progress
     double progress;
-    Color progressBarColor = const Color(0xFF16A34A); // Default green
+    Color progressBarColor = progressBackgroundColor; // Default green or red for junk food
 
     if (widget.title == 'Junk Food') {
       if (widget.current == 0) {
         progress = 1.0;
         progressBarColor = const Color(0xFF16A34A); // Green
       } else {
-        // progress = max(0, 1 - (current / 1)); // Simplified for now, assuming goal is 0 for junk food
         progress = (widget.current > 0) ? 0.0 : 1.0; // If current > 0, progress is 0 for visual warning
         progressBarColor = const Color(0xFFEF4444); // Red
       }
@@ -55,7 +87,7 @@ class _GoalCardState extends State<GoalCard> {
         curve: Curves.easeOut,
         transform: Matrix4.translationValues(0, _isHovering ? -2 : 0, 0),
         decoration: BoxDecoration(
-          color: widget.backgroundColor,
+          color: cardBackgroundColor, // Apply the determined background color
           borderRadius: BorderRadius.circular(16), // 16-20px
           boxShadow: [
             BoxShadow(
@@ -72,23 +104,14 @@ class _GoalCardState extends State<GoalCard> {
         ),
         padding: EdgeInsets.fromLTRB(24, 24, 24, isMobile ? 16 : 20),
         child: Column(
-          crossAxisAlignment: isMobile ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Text(
-              '${widget.index}.',
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF111827),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
               widget.title,
-              style: const TextStyle(
-                fontSize: 18, // 18-20
+              style: GoogleFonts.fredoka(
+                fontSize: 28, // 18-20
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF111827),
+                color: textColor, // Apply the determined text color
                 height: 1.3,
               ),
               textAlign: isMobile ? TextAlign.center : TextAlign.start,
@@ -96,45 +119,60 @@ class _GoalCardState extends State<GoalCard> {
             const SizedBox(height: 8),
             Text.rich(
               TextSpan(
-                text: 'Today: ',
-                style: const TextStyle(
-                  fontSize: 14, // 14-16
-                  color: Color(0xFF374151),
-                  height: 1.6,
+                text: '${widget.current}',
+                style: GoogleFonts.fredoka(
+                  fontSize: 28, // Adjusted to match title font size
+                  color: textColor, // Adjusted to match title color
+                  height: 1.3, // Adjusted for better vertical alignment
+                  fontWeight: FontWeight.bold, // Set to bold
                 ),
                 children: [
                   TextSpan(
-                    text: '${widget.current}',
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  TextSpan(
-                    text: ' / Goal: ${widget.goal} servings',
+                    text: ' / ${widget.goal}',
+                    style: GoogleFonts.fredoka(
+                      fontSize: 28, // Adjusted to match title font size
+                      color: textColor, // Adjusted to match title color
+                      height: 1.3, // Adjusted for better vertical alignment
+                      fontWeight: FontWeight.bold, // Set to bold
+                    ),
                   ),
                   if (showReduceIntake)
                     TextSpan(
                       text: ' (reduce intake)',
-                      style: TextStyle(
+                      style: GoogleFonts.fredoka(
                         fontSize: 12,
-                        color: Color(0xFFB91C1C),
+                        color: textColor.withOpacity(0.9), // Adjust color for warning text
                       ),
                     ),
                 ],
               ),
-              textAlign: isMobile ? TextAlign.center : TextAlign.start,
+              textAlign: TextAlign.center, // Centered alignment
             ),
             const Spacer(),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12.0),
-              child: Semantics(
-                label: '${widget.title} progress ${ (progress * 100).round()}%',
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(10), // Rounded corners for progress bar
-                  child: LinearProgressIndicator(
-                    value: progress,
-                    backgroundColor: Colors.black.withOpacity(0.08),
-                    valueColor: AlwaysStoppedAnimation<Color>(progressBarColor),
-                    minHeight: 12, // 10-12px
-                  ),
+            Center(
+              child: SizedBox(
+                width: 130,
+                height: 130,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    CircularProgressIndicator(
+                      value: progress,
+                      backgroundColor: Colors.black.withOpacity(0.08),
+                      valueColor: AlwaysStoppedAnimation<Color>(progressBarColor),
+                      strokeWidth: 16.0, // Increased strokeWidth for larger indicator
+                    ),
+                    Center(
+                      child: Text(
+                        '${(progress * 100).round()}%',
+                        style: GoogleFonts.fredoka(
+                          fontSize: 20, // Increased font size for percentage
+                          fontWeight: FontWeight.w700,
+                          color: textColor,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),

@@ -27,7 +27,7 @@ class _HomePageState extends State<HomePage> {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F7F8),
+      backgroundColor: Colors.transparent, // Make Scaffold background transparent
       body: Column(
         children: [
           // Navigation Bar
@@ -56,90 +56,113 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
           ),
-          // Hero Section
-          Container(
-            width: double.infinity,
-            color: const Color(0xFFF7F7F8),
-            padding: EdgeInsets.symmetric(
-              vertical: isMobile ? 48.0 : 64.0,
-              horizontal: horizontalPadding,
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+          // Expanded section for background, overlay, and content
+          Expanded(
+            child: Stack(
               children: [
-                Text(
-                  "Your goals start with a meal.",
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.poppins(
-                    color: const Color(0xFF111827),
-                    fontWeight: FontWeight.w800,
-                    fontSize: isMobile ? 32 : (isTablet ? 48 : 60),
-                    height: 1.2,
+                // Background Image
+                Positioned.fill(
+                  child: Image.asset(
+                    'assets/images/back.png',
+                    fit: BoxFit.cover,
                   ),
                 ),
-                const SizedBox(height: 16),
-                Text(
-                  "Track your diet, achieve your health goals.",
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.poppins(
-                    color: const Color(0xFF6B7280),
-                    fontSize: isMobile ? 16 : 18,
-                    height: 1.6,
+                // Semi-transparent overlay
+                Positioned.fill(
+                  child: Container(
+                    color: Colors.white.withOpacity(0.8),
+                  ),
+                ),
+                // Original content (Hero Section and Goal Cards Section)
+                SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      // Hero Section
+                      Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.symmetric(
+                          vertical: isMobile ? 48.0 : 64.0,
+                          horizontal: horizontalPadding,
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              "Your goals start with a meal.",
+                              style: GoogleFonts.handlee(
+                                fontSize: 72,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 1.5,
+                                color: Colors.black,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              "Track your diet, achieve your health goals.",
+                              style: GoogleFonts.handlee(
+                                fontSize: 40,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 1.0,
+                                color: const Color(0xFF111827), // Assuming Colors.black or a similar dark color
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Goal Cards Section
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                        child: Column(
+                          children: [
+                            SizedBox(height: isMobile ? 32 : 40),
+                            ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 1120),
+                              child: FutureBuilder<List<Goal>>(
+                                future: _goalStore.fetchGoals(),
+                                builder: (context, snapshot) {
+                                  if (snapshot.connectionState == ConnectionState.waiting) {
+                                    return const Center(child: CircularProgressIndicator());
+                                  } else if (snapshot.hasError) {
+                                    return Center(child: Text('Error: ${snapshot.error}'));
+                                  } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                                    return const Center(child: Text('No goals found.'));
+                                  } else {
+                                    final goals = snapshot.data!;
+                                    return GridView.builder(
+                                      shrinkWrap: true,
+                                      physics: const NeverScrollableScrollPhysics(),
+                                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                        crossAxisCount: isMobile ? 1 : (isTablet ? 2 : 4),
+                                        crossAxisSpacing: isMobile ? 0 : 16,
+                                        mainAxisSpacing: 16,
+                                        childAspectRatio: isMobile ? (screenSize.width - horizontalPadding * 2) / 200 : 1,
+                                      ),
+                                      itemCount: goals.length,
+                                      itemBuilder: (context, index) {
+                                        final goal = goals[index];
+                                        return GoalCard(
+                                          index: goal.index,
+                                          title: goal.title,
+                                          current: goal.current,
+                                          goal: goal.goal,
+                                          backgroundColor: goal.backgroundColor,
+                                        );
+                                      },
+                                    );
+                                  }
+                                },
+                              ),
+                            ),
+                            const SizedBox(height: 40),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
-            ),
-          ),
-          // Goal Cards Section
-          Expanded(
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-                child: Column(
-                  children: [
-                    SizedBox(height: isMobile ? 32 : 40),
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 1120),
-                      child: FutureBuilder<List<Goal>>(
-                        future: _goalStore.fetchGoals(),
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState == ConnectionState.waiting) {
-                            return const Center(child: CircularProgressIndicator());
-                          } else if (snapshot.hasError) {
-                            return Center(child: Text('Error: ${snapshot.error}'));
-                          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                            return const Center(child: Text('No goals found.'));
-                          } else {
-                            final goals = snapshot.data!;
-                            return GridView.builder(
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: isMobile ? 1 : (isTablet ? 2 : 4),
-                                crossAxisSpacing: isMobile ? 0 : 16,
-                                mainAxisSpacing: 16,
-                                childAspectRatio: isMobile ? (screenSize.width - horizontalPadding * 2) / 200 : 1, // Adjust aspect ratio for mobile
-                              ),
-                              itemCount: goals.length,
-                              itemBuilder: (context, index) {
-                                final goal = goals[index];
-                                return GoalCard(
-                                  index: goal.index,
-                                  title: goal.title,
-                                  current: goal.current,
-                                  goal: goal.goal,
-                                  backgroundColor: goal.backgroundColor,
-                                );
-                              },
-                            );
-                          }
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 40), // Bottom spacing for cards section
-                  ],
-                ),
-              ),
             ),
           ),
         ],
