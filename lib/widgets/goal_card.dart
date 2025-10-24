@@ -111,7 +111,9 @@ class _GoalCardState extends State<GoalCard> {
             Text(
               widget.isMobileView && widget.title == 'Whole Grains'
                   ? 'W.Grains'
-                  : widget.title,
+                  : widget.isMobileView && widget.title == 'Vegetables'
+                      ? 'Vegetable'
+                      : widget.title,
               style: GoogleFonts.fredoka(
                 fontSize: widget.isMobileView ? 20 : 28, // Adjust font size based on isMobileView
                 fontWeight: FontWeight.w700,
