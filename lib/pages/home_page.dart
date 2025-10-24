@@ -135,7 +135,7 @@ final df = DateFormat('yyyy/MM/dd');
                         padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
                         child: Column(
                           children: [
-                            SizedBox(height: isMobile ? 32 : 40),
+                            SizedBox(height: 0),
                             ConstrainedBox(
                               constraints: const BoxConstraints(maxWidth: 1120),
                               child: Column(
