@@ -2,15 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class GoalCard extends StatefulWidget {
-  final int index;
   final String title;
   final int current;
   final int goal;
   final Color? backgroundColor; // Make background color optional
-
+ 
   const GoalCard({
     Key? key,
-    required this.index,
     required this.title,
     required this.current,
     required this.goal,

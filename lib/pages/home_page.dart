@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dietweb/widgets/goal_card.dart';
 import 'package:flutter_dietweb/stores/goal_store.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart'; // 為了使用 context.read
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -11,7 +13,21 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final GoalStore _goalStore = GoalStore();
+  late final PageController _pageCtrl;
+  int _pageIndex = 0;
+
+
+  @override
+  void initState() {
+    super.initState();
+    _pageCtrl = PageController(initialPage: 0);
+  }
+
+  @override
+  void dispose() {
+    _pageCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,6 +41,9 @@ class _HomePageState extends State<HomePage> {
     } else if (!isMobile) {
       horizontalPadding = 72.0;
     }
+
+final df = DateFormat('yyyy/MM/dd');
+    final days = context.watch<GoalStore>().days; // 依你的狀態管理方式取用
 
     return Scaffold(
       backgroundColor: Colors.transparent, // Make Scaffold background transparent
@@ -119,40 +138,107 @@ class _HomePageState extends State<HomePage> {
                             SizedBox(height: isMobile ? 32 : 40),
                             ConstrainedBox(
                               constraints: const BoxConstraints(maxWidth: 1120),
-                              child: FutureBuilder<List<Goal>>(
-                                future: _goalStore.fetchGoals(),
-                                builder: (context, snapshot) {
-                                  if (snapshot.connectionState == ConnectionState.waiting) {
-                                    return const Center(child: CircularProgressIndicator());
-                                  } else if (snapshot.hasError) {
-                                    return Center(child: Text('Error: ${snapshot.error}'));
-                                  } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                                    return const Center(child: Text('No goals found.'));
-                                  } else {
-                                    final goals = snapshot.data!;
-                                    return GridView.builder(
-                                      shrinkWrap: true,
-                                      physics: const NeverScrollableScrollPhysics(),
-                                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                                        crossAxisCount: isMobile ? 1 : (isTablet ? 2 : 4),
-                                        crossAxisSpacing: isMobile ? 0 : 16,
-                                        mainAxisSpacing: 16,
-                                        childAspectRatio: isMobile ? (screenSize.width - horizontalPadding * 2) / 200 : 1,
-                                      ),
-                                      itemCount: goals.length,
-                                      itemBuilder: (context, index) {
-                                        final goal = goals[index];
-                                        return GoalCard(
-                                          index: goal.index,
-                                          title: goal.title,
-                                          current: goal.current,
-                                          goal: goal.goal,
-                                          backgroundColor: goal.backgroundColor,
-                                        );
-                                      },
-                                    );
-                                  }
-                                },
+                              child: Column(
+                                children: [
+                                  // 日期 + 左右箭頭
+// 日期列與左右箭頭
+Padding(
+ padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+ child: Row(
+   children: [
+     Text(
+       df.format(days[_pageIndex].date),
+       style: Theme.of(context).textTheme.titleLarge,
+     ),
+     const Spacer(),
+     IconButton(
+       tooltip: 'Previous',
+       onPressed: _pageIndex > 0
+           ? () {
+               _pageCtrl.animateToPage(
+                 _pageIndex - 1,
+                 duration: const Duration(milliseconds: 250),
+                 curve: Curves.easeOut,
+               );
+             }
+           : null,
+       icon: const Icon(Icons.chevron_left),
+     ),
+     IconButton(
+       tooltip: 'Next',
+       onPressed: _pageIndex < days.length - 1
+           ? () {
+               _pageCtrl.animateToPage(
+                 _pageIndex + 1,
+                 duration: const Duration(milliseconds: 250),
+                 curve: Curves.easeOut,
+               );
+             }
+           : null,
+       icon: const Icon(Icons.chevron_right),
+     ),
+   ],
+ ),
+),
+
+// 一頁 4 張卡片，橫向排列
+SizedBox(
+ height: 300, // 卡片高度調低，畫面更平衡
+ child: PageView.builder(
+   controller: _pageCtrl,
+   itemCount: days.length,
+   onPageChanged: (i) => setState(() => _pageIndex = i),
+   itemBuilder: (context, index) {
+     final day = days[index];
+     final goals = day.goals; // 必須是 4 筆資料
+
+     return Padding(
+       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+       child: Row(
+         crossAxisAlignment: CrossAxisAlignment.start,
+         children: [
+           Expanded(
+             child: GoalCard(
+               title: goals[0].title,
+               current: goals[0].current,
+               goal: goals[0].goal,
+               backgroundColor: goals[0].backgroundColor,
+             ),
+           ),
+           const SizedBox(width: 24),
+           Expanded(
+             child: GoalCard(
+               title: goals[1].title,
+               current: goals[1].current,
+               goal: goals[1].goal,
+               backgroundColor: goals[1].backgroundColor,
+             ),
+           ),
+           const SizedBox(width: 24),
+           Expanded(
+             child: GoalCard(
+               title: goals[2].title,
+               current: goals[2].current,
+               goal: goals[2].goal,
+               backgroundColor: goals[2].backgroundColor,
+             ),
+           ),
+           const SizedBox(width: 24),
+           Expanded(
+             child: GoalCard(
+               title: goals[3].title,
+               current: goals[3].current,
+               goal: goals[3].goal,
+               backgroundColor: goals[3].backgroundColor,
+             ),
+           ),
+         ],
+       ),
+     );
+   },
+ ),
+),
+                                ],
                               ),
                             ),
                             const SizedBox(height: 40),

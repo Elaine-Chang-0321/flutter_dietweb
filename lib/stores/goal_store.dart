@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart'; // Import for Color
+import 'package:collection/collection.dart'; // For partition
 
 class Goal {
   final int index;
@@ -15,6 +16,16 @@ class Goal {
     required this.goal,
     required this.backgroundColor,
   });
+}
+
+class DailyProgress {
+  final DateTime date;
+  final List<Goal> goals;
+
+  DailyProgress({
+    required this.date,
+    required this.goals,
+  }) : assert(goals.length == 4);
 }
 
 class GoalStore {
@@ -64,39 +75,55 @@ class GoalStore {
     return junkFoodCurrent > junkFoodGoal;
   }
 
-  Future<List<Goal>> fetchGoals() async {
-    // 模擬網路請求延遲
-    await Future.delayed(const Duration(milliseconds: 500));
+  // 修改為提供 List<DailyProgress> days
+  List<DailyProgress> get days {
+    // 模擬多天的數據
+    final today = DateTime.now();
+    final List<DailyProgress> dailyProgressList = [];
 
-    return [
-      Goal(
-        index: 1,
-        title: "Whole Grains",
-        current: wholeGrainsCurrent,
-        goal: wholeGrainsGoal,
-        backgroundColor: const Color(0xFFFEE2E2), // 粉彩色
-      ),
-      Goal(
-        index: 2,
-        title: "Protein",
-        current: proteinCurrent,
-        goal: proteinGoal,
-        backgroundColor: const Color(0xFFDBEAFE), // 粉彩色
-      ),
-      Goal(
-        index: 3,
-        title: "Vegetables",
-        current: vegetablesCurrent,
-        goal: vegetablesGoal,
-        backgroundColor: const Color(0xFFD1FAE5), // 粉彩色
-      ),
-      Goal(
-        index: 4,
-        title: "Junk Food",
-        current: junkFoodCurrent,
-        goal: junkFoodGoal,
-        backgroundColor: const Color(0xFFFEF3C7), // 粉彩色
-      ),
-    ];
+    for (int i = 0; i < 7; i++) { // 產生七天的數據
+      final date = today.subtract(Duration(days: i));
+      // 每個 DailyProgress 內含四個 Goal
+      final goals = [
+        Goal(
+          index: 1,
+          title: "Whole Grains",
+          current: wholeGrainsCurrent + i, // 範例數據隨日期變化
+          goal: wholeGrainsGoal,
+          backgroundColor: const Color(0xFFFEE2E2),
+        ),
+        Goal(
+          index: 2,
+          title: "Protein",
+          current: proteinCurrent + i,
+          goal: proteinGoal,
+          backgroundColor: const Color(0xFFDBEAFE),
+        ),
+        Goal(
+          index: 3,
+          title: "Vegetables",
+          current: vegetablesCurrent + i,
+          goal: vegetablesGoal,
+          backgroundColor: const Color(0xFFD1FAE5),
+        ),
+        Goal(
+          index: 4,
+          title: "Junk Food",
+          current: junkFoodCurrent + (i % 2), // 範例數據
+          goal: junkFoodGoal,
+          backgroundColor: const Color(0xFFFEF3C7),
+        ),
+      ];
+      dailyProgressList.add(DailyProgress(date: date, goals: goals));
+    }
+    return dailyProgressList.reversed.toList(); // 讓日期由舊到新
+  }
+
+  // 原有的 fetchGoals 函數可以移除或修改，這裡暫時保留並修改其返回類型以適應新的數據結構
+  // 如果 HomePage 不再直接使用此函數，可以考慮移除。
+  Future<List<Goal>> fetchGoals() async {
+    await Future.delayed(const Duration(milliseconds: 500));
+    // 返回最新一天的目標列表
+    return days.last.goals;
   }
 }
