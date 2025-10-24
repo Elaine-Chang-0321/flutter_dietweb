@@ -34,6 +34,7 @@ class _HomePageState extends State<HomePage> {
     final Size screenSize = MediaQuery.of(context).size;
     final bool isMobile = screenSize.width < 600;
     final bool isTablet = screenSize.width >= 600 && screenSize.width < 1024;
+    final bool isSmallMobile = screenSize.width < 600;
 
     double horizontalPadding = 24.0;
     if (isTablet) {
@@ -181,9 +182,9 @@ Padding(
  ),
 ),
 
-// 一頁 4 張卡片，橫向排列
+// 一頁 4 張卡片，橫向排列 (桌面版) 或 2x2 網格 (手機版)
 SizedBox(
- height: 300, // 卡片高度調低，畫面更平衡
+ height: isSmallMobile ? 400 : 300,
  child: PageView.builder(
    controller: _pageCtrl,
    itemCount: days.length,
@@ -192,49 +193,83 @@ SizedBox(
      final day = days[index];
      final goals = day.goals; // 必須是 4 筆資料
 
-     return Padding(
-       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-       child: Row(
-         crossAxisAlignment: CrossAxisAlignment.start,
-         children: [
-           Expanded(
-             child: GoalCard(
-               title: goals[0].title,
-               current: goals[0].current,
-               goal: goals[0].goal,
-               backgroundColor: goals[0].backgroundColor,
-             ),
+     if (isSmallMobile) {
+       return Padding(
+         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+         child: GridView.builder(
+           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+             crossAxisCount: 2,
+             childAspectRatio: 1.0,
+             crossAxisSpacing: 16,
+             mainAxisSpacing: 16,
            ),
-           const SizedBox(width: 24),
-           Expanded(
-             child: GoalCard(
-               title: goals[1].title,
-               current: goals[1].current,
-               goal: goals[1].goal,
-               backgroundColor: goals[1].backgroundColor,
+           physics: const NeverScrollableScrollPhysics(), // 避免 GridView 自身滾動
+           itemCount: goals.length,
+           itemBuilder: (context, gridIndex) {
+             return GoalCard(
+               title: goals[gridIndex].title,
+               current: goals[gridIndex].current,
+               goal: goals[gridIndex].goal,
+               backgroundColor: goals[gridIndex].backgroundColor,
+               showCircularProgress: !isMobile, // 在手機板不顯示圓形進度條
+               isMobileView: isMobile, // 傳遞 isMobile 判斷給 GoalCard
+             );
+           },
+         ),
+       );
+     } else {
+       return Padding(
+         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+         child: Row(
+           crossAxisAlignment: CrossAxisAlignment.start,
+           children: [
+             Expanded(
+               child: GoalCard(
+                 title: goals[0].title,
+                 current: goals[0].current,
+                 goal: goals[0].goal,
+                 backgroundColor: goals[0].backgroundColor,
+                 showCircularProgress: !isMobile, // 在手機板不顯示圓形進度條
+                 isMobileView: isMobile, // 傳遞 isMobile 判斷給 GoalCard
+               ),
              ),
-           ),
-           const SizedBox(width: 24),
-           Expanded(
-             child: GoalCard(
-               title: goals[2].title,
-               current: goals[2].current,
-               goal: goals[2].goal,
-               backgroundColor: goals[2].backgroundColor,
+             const SizedBox(width: 24),
+             Expanded(
+               child: GoalCard(
+                 title: goals[1].title,
+                 current: goals[1].current,
+                 goal: goals[1].goal,
+                 backgroundColor: goals[1].backgroundColor,
+                 showCircularProgress: !isMobile, // 在手機板不顯示圓形進度條
+                 isMobileView: isMobile, // 傳遞 isMobile 判斷給 GoalCard
+               ),
              ),
-           ),
-           const SizedBox(width: 24),
-           Expanded(
-             child: GoalCard(
-               title: goals[3].title,
-               current: goals[3].current,
-               goal: goals[3].goal,
-               backgroundColor: goals[3].backgroundColor,
+             const SizedBox(width: 24),
+             Expanded(
+               child: GoalCard(
+                 title: goals[2].title,
+                 current: goals[2].current,
+                 goal: goals[2].goal,
+                 backgroundColor: goals[2].backgroundColor,
+                 showCircularProgress: !isMobile, // 在手機板不顯示圓形進度條
+                 isMobileView: isMobile, // 傳遞 isMobile 判斷給 GoalCard
+               ),
              ),
-           ),
-         ],
-       ),
-     );
+             const SizedBox(width: 24),
+             Expanded(
+               child: GoalCard(
+                 title: goals[3].title,
+                 current: goals[3].current,
+                 goal: goals[3].goal,
+                 backgroundColor: goals[3].backgroundColor,
+                 showCircularProgress: !isMobile, // 在手機板不顯示圓形進度條
+                 isMobileView: isMobile, // 傳遞 isMobile 判斷給 GoalCard
+               ),
+             ),
+           ],
+         ),
+       );
+     }
    },
  ),
 ),

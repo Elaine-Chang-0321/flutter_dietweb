@@ -6,13 +6,17 @@ class GoalCard extends StatefulWidget {
   final int current;
   final int goal;
   final Color? backgroundColor; // Make background color optional
- 
+  final bool showCircularProgress; // New parameter to control circular progress visibility
+  final bool isMobileView; // New parameter to adjust font size for mobile view
+
   const GoalCard({
     Key? key,
     required this.title,
     required this.current,
     required this.goal,
     this.backgroundColor, // Make background color optional
+    this.showCircularProgress = true, // Default to true
+    this.isMobileView = false, // Default to false
   }) : super(key: key);
 
   @override
@@ -24,7 +28,7 @@ class _GoalCardState extends State<GoalCard> {
 
   @override
   Widget build(BuildContext context) {
-    final bool isMobile = MediaQuery.of(context).size.width < 600;
+    // final bool isMobile = MediaQuery.of(context).size.width < 600; // Use widget.isMobileView instead
 
     // Define background colors based on title
     Color cardBackgroundColor;
@@ -75,7 +79,7 @@ class _GoalCardState extends State<GoalCard> {
     }
 
     // Determine if "reduce intake" text should be shown
-    bool showReduceIntake = widget.title == 'Junk Food' && widget.current > 0;
+    bool showReduceIntake = widget.title == 'Junk Food' && widget.current > 0 && !widget.isMobileView;
 
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovering = true),
@@ -100,26 +104,28 @@ class _GoalCardState extends State<GoalCard> {
           minWidth: 240,
           minHeight: 220,
         ),
-        padding: EdgeInsets.fromLTRB(24, 24, 24, isMobile ? 16 : 20),
+        padding: EdgeInsets.fromLTRB(24, 24, 24, widget.isMobileView ? 16 : 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Text(
-              widget.title,
+              widget.isMobileView && widget.title == 'Whole Grains'
+                  ? 'W.Grains'
+                  : widget.title,
               style: GoogleFonts.fredoka(
-                fontSize: 28, // 18-20
+                fontSize: widget.isMobileView ? 20 : 28, // Adjust font size based on isMobileView
                 fontWeight: FontWeight.w700,
                 color: textColor, // Apply the determined text color
                 height: 1.3,
               ),
-              textAlign: isMobile ? TextAlign.center : TextAlign.start,
+              textAlign: widget.isMobileView ? TextAlign.center : TextAlign.start,
             ),
             const SizedBox(height: 8),
             Text.rich(
               TextSpan(
                 text: '${widget.current}',
                 style: GoogleFonts.fredoka(
-                  fontSize: 28, // Adjusted to match title font size
+                  fontSize: widget.isMobileView ? 20 : 28, // Adjust font size based on isMobileView
                   color: textColor, // Adjusted to match title color
                   height: 1.3, // Adjusted for better vertical alignment
                   fontWeight: FontWeight.bold, // Set to bold
@@ -128,7 +134,7 @@ class _GoalCardState extends State<GoalCard> {
                   TextSpan(
                     text: ' / ${widget.goal}',
                     style: GoogleFonts.fredoka(
-                      fontSize: 28, // Adjusted to match title font size
+                      fontSize: widget.isMobileView ? 20 : 28, // Adjust font size based on isMobileView
                       color: textColor, // Adjusted to match title color
                       height: 1.3, // Adjusted for better vertical alignment
                       fontWeight: FontWeight.bold, // Set to bold
@@ -138,7 +144,7 @@ class _GoalCardState extends State<GoalCard> {
                     TextSpan(
                       text: ' (reduce intake)',
                       style: GoogleFonts.fredoka(
-                        fontSize: 12,
+                        fontSize: widget.isMobileView ? 10 : 12, // Adjust font size based on isMobileView
                         color: textColor.withOpacity(0.9), // Adjust color for warning text
                       ),
                     ),
@@ -147,33 +153,34 @@ class _GoalCardState extends State<GoalCard> {
               textAlign: TextAlign.center, // Centered alignment
             ),
             const Spacer(),
-            Center(
-              child: SizedBox(
-                width: 130,
-                height: 130,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    CircularProgressIndicator(
-                      value: progress,
-                      backgroundColor: Colors.black.withOpacity(0.08),
-                      valueColor: AlwaysStoppedAnimation<Color>(progressBarColor),
-                      strokeWidth: 16.0, // Increased strokeWidth for larger indicator
-                    ),
-                    Center(
-                      child: Text(
-                        '${(progress * 100).round()}%',
-                        style: GoogleFonts.fredoka(
-                          fontSize: 20, // Increased font size for percentage
-                          fontWeight: FontWeight.w700,
-                          color: textColor,
+            if (widget.showCircularProgress)
+              Center(
+                child: SizedBox(
+                  width: 130,
+                  height: 130,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      CircularProgressIndicator(
+                        value: progress,
+                        backgroundColor: Colors.black.withOpacity(0.08),
+                        valueColor: AlwaysStoppedAnimation<Color>(progressBarColor),
+                        strokeWidth: 16.0, // Increased strokeWidth for larger indicator
+                      ),
+                      Center(
+                        child: Text(
+                          '${(progress * 100).round()}%',
+                          style: GoogleFonts.fredoka(
+                            fontSize: widget.isMobileView ? 16 : 20, // Adjust font size based on isMobileView
+                            fontWeight: FontWeight.w700,
+                            color: textColor,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
           ],
         ),
       ),
