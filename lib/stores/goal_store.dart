@@ -1,6 +1,5 @@
 import 'dart:math';
 import 'package:flutter/material.dart'; // Import for Color
-import 'package:collection/collection.dart'; // For partition
 
 class Goal {
   final int index;

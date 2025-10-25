@@ -294,7 +294,11 @@ SizedBox(
   Widget _navButton(BuildContext context, String text, {bool isSelected = false}) {
     return TextButton(
       onPressed: () {
-        // Handle navigation
+        if (text == "Record Meal") {
+          Navigator.pushNamed(context, '/record');
+        } else if (text == "History") {
+          Navigator.pushNamed(context, '/history');
+        }
       },
       style: TextButton.styleFrom(
         foregroundColor: isSelected ? const Color(0xFF111827) : const Color(0xFF374151),
