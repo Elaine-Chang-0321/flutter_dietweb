@@ -1,5 +1,8 @@
 import 'dart:math';
 import 'package:flutter/material.dart'; // Import for Color
+import 'package:flutter_dietweb/models/day_totals.dart';
+import 'package:flutter_dietweb/services/api_client.dart';
+import 'package:intl/intl.dart';
 
 class Goal {
   final int index;
@@ -27,18 +30,22 @@ class DailyProgress {
   }) : assert(goals.length == 4);
 }
 
-class GoalStore {
+class GoalStore with ChangeNotifier {
   // 固定目標值
   static const int wholeGrainsGoal = 5;
   static const int proteinGoal = 10;
   static const int vegetablesGoal = 3;
   static const int junkFoodGoal = 0; // 特殊處理，目標為0
 
+  bool isLoading = false;
+  String? errorMessage;
+  List<DayTotals> _dayTotals = [];
+
   // 當日目前值，預設皆為 0
-  int wholeGrainsCurrent = 2; // 範例數據
-  int proteinCurrent = 7;     // 範例數據
-  int vegetablesCurrent = 1;  // 範例數據
-  int junkFoodCurrent = 1;    // 範例數據
+  int wholeGrainsCurrent = 0;
+  int proteinCurrent = 0;
+  int vegetablesCurrent = 0;
+  int junkFoodCurrent = 0;
 
   // 進度計算 - Whole Grains
   double get wholeGrainsProgress {
@@ -74,55 +81,105 @@ class GoalStore {
     return junkFoodCurrent > junkFoodGoal;
   }
 
-  // 修改為提供 List<DailyProgress> days
   List<DailyProgress> get days {
-    // 模擬多天的數據
-    final today = DateTime.now();
     final List<DailyProgress> dailyProgressList = [];
 
-    for (int i = 0; i < 7; i++) { // 產生七天的數據
-      final date = today.subtract(Duration(days: i));
-      // 每個 DailyProgress 內含四個 Goal
+    for (var dayTotal in _dayTotals) {
       final goals = [
         Goal(
           index: 1,
           title: "Whole Grains",
-          current: wholeGrainsCurrent + i, // 範例數據隨日期變化
+          current: dayTotal.wholeGrains,
           goal: wholeGrainsGoal,
           backgroundColor: const Color(0xFFFEE2E2),
         ),
         Goal(
           index: 2,
           title: "Protein",
-          current: proteinCurrent + i,
+          current: dayTotal.proteinTotal,
           goal: proteinGoal,
           backgroundColor: const Color(0xFFDBEAFE),
         ),
         Goal(
           index: 3,
           title: "Vegetables",
-          current: vegetablesCurrent + i,
+          current: dayTotal.vegetables,
           goal: vegetablesGoal,
           backgroundColor: const Color(0xFFD1FAE5),
         ),
         Goal(
           index: 4,
           title: "Junk Food",
-          current: junkFoodCurrent + (i % 2), // 範例數據
+          current: dayTotal.junkFood,
           goal: junkFoodGoal,
           backgroundColor: const Color(0xFFFEF3C7),
         ),
       ];
-      dailyProgressList.add(DailyProgress(date: date, goals: goals));
+      dailyProgressList.add(DailyProgress(date: dayTotal.date, goals: goals));
     }
-    return dailyProgressList.reversed.toList(); // 讓日期由舊到新
+    return dailyProgressList;
   }
 
-  // 原有的 fetchGoals 函數可以移除或修改，這裡暫時保留並修改其返回類型以適應新的數據結構
-  // 如果 HomePage 不再直接使用此函數，可以考慮移除。
+  Future<void> loadDays({required DateTime from, required DateTime to}) async {
+    isLoading = true;
+    errorMessage = null;
+    notifyListeners();
+
+    try {
+      _dayTotals.clear();
+      for (int i = 0; i <= to.difference(from).inDays; i++) {
+        final date = from.add(Duration(days: i));
+        try {
+          final json = await ApiClient.fetchDailySummary(date);
+          _dayTotals.add(DayTotals.fromJson({
+            'date': DateFormat('yyyy-MM-dd').format(date), // 使用 DateFormat 格式化日期
+            'whole_grains': json['whole_grains'] ?? 0,
+            'vegetables': json['vegetables'] ?? 0,
+            'protein_total': json['protein_total'] ?? 0,
+            'junk_food': json['junk_food'] ?? 0,
+          }));
+        } catch (e) {
+          // 如果某一天沒有資料，就當作 0
+          _dayTotals.add(DayTotals.fromJson({
+            'date': DateFormat('yyyy-MM-dd').format(date),
+            'whole_grains': 0,
+            'vegetables': 0,
+            'protein_total': 0,
+            'junk_food': 0,
+          }));
+        }
+      }
+
+      // Update current values for the latest day if available
+      if (_dayTotals.isNotEmpty) {
+        final latestDay = _dayTotals.last;
+        wholeGrainsCurrent = latestDay.wholeGrains;
+        proteinCurrent = latestDay.proteinTotal;
+        vegetablesCurrent = latestDay.vegetables;
+        junkFoodCurrent = latestDay.junkFood;
+      } else {
+        wholeGrainsCurrent = 0;
+        proteinCurrent = 0;
+        vegetablesCurrent = 0;
+        junkFoodCurrent = 0;
+      }
+    } catch (e) {
+      errorMessage = e.toString();
+      _dayTotals = [];
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  // The fetchGoals method can be removed as Home page will now use `days` getter directly.
+  // Keeping it for now to avoid breaking existing code, but it should be refactored.
   Future<List<Goal>> fetchGoals() async {
     await Future.delayed(const Duration(milliseconds: 500));
-    // 返回最新一天的目標列表
+    // If _dayTotals is empty, return an empty list or throw an error.
+    if (_dayTotals.isEmpty) {
+      return [];
+    }
     return days.last.goals;
   }
 }

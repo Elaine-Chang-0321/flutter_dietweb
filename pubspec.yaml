@@ -39,6 +39,8 @@ dependencies:
   provider: ^6.1.2
   image_picker_web: ^3.1.1 # For web image picking
   dotted_border: ^2.1.0 # For dotted border UI
+  http: ^1.2.2
+  flutter_dotenv: ^5.1.0
 
 dev_dependencies:
   flutter_test:
@@ -63,6 +65,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/back.png
+    - .env
 
 
   # To add assets to your application, add an assets section, like this:

@@ -4,6 +4,9 @@ import 'package:image_picker_web/image_picker_web.dart';
 import 'package:dotted_border/dotted_border.dart';
 import 'dart:typed_data'; // Required for Uint8List
 import 'package:intl/intl.dart'; // For date formatting
+import 'package:flutter_dietweb/services/api_client.dart';
+import 'package:provider/provider.dart';
+import 'package:flutter_dietweb/stores/goal_store.dart';
 
 // ImageUploadSection Widget
 class _ImageUploadSection extends StatefulWidget {
@@ -1043,7 +1046,9 @@ class _RecordPageState extends State<RecordPage> {
     });
   }
 
-  void _submitForm() {
+  int _toInt(String s) => int.tryParse(s.trim()) ?? 0;
+
+  Future<void> _submitForm() async {
     setState(() {
       // Date validation
       if (_selectedDate.isAfter(DateTime.now())) {
@@ -1054,24 +1059,71 @@ class _RecordPageState extends State<RecordPage> {
     });
 
     if (_formKey.currentState?.validate() ?? false) {
-      if (_dateErrorText == null) {
-        // All validations passed, process form data
-        print('Form is valid and submitted!');
-        print('Selected Date: $_selectedDate');
-        print('Selected Meal: $_selectedMeal');
-        print('Whole Grains: ${_wholeGrainsController.text}');
-        print('Vegetables: ${_vegetablesController.text}');
-        print('Protein Low-fat: ${_proteinLowFatController.text}');
-        print('Protein Medium-fat: ${_proteinMediumFatController.text}');
-        print('Protein High-fat: ${_proteinHighFatController.text}');
-        print('Protein Extra-high-fat: ${_proteinExtraHighFatController.text}');
-        print('Junk food: ${_junkFoodController.text}');
-        print('Protein Total Warning: $_proteinTotalWarning');
+      if (_dateErrorText == null && _selectedMeal != null) {
+        setState(() {
+          _isLoading = true;
+        });
 
-        // Here you would typically send the data to a backend or save it locally.
+        try {
+          await ApiClient.createRecord(
+            {
+              'date': DateFormat('yyyy-MM-dd').format(_selectedDate),
+              'meal': _selectedMeal!,
+              'whole_grains': _toInt(_wholeGrainsController.text),
+              'vegetables': _toInt(_vegetablesController.text),
+              'protein_low': _toInt(_proteinLowFatController.text),
+              'protein_med': _toInt(_proteinMediumFatController.text),
+              'protein_high': _toInt(_proteinHighFatController.text),
+              'protein_xhigh': _toInt(_proteinExtraHighFatController.text),
+              'junk_food': _toInt(_junkFoodController.text),
+              // 'note': null, // assuming no note controller for now
+              // 'image_url': null, // assuming no image URL for now
+            },
+          );
+
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Saved successfully!')),
+          );
+          // Clear form fields after successful submission
+          setState(() {
+            _selectedDate = DateTime.now();
+            _selectedMeal = null;
+            _wholeGrainsController.text = '0';
+            _vegetablesController.text = '0';
+            _proteinLowFatController.text = '0';
+            _proteinMediumFatController.text = '0';
+            _proteinHighFatController.text = '0';
+            _proteinExtraHighFatController.text = '0';
+            _junkFoodController.text = '0';
+            _proteinTotalWarning = null;
+          });
+          // Optionally refresh Home page data
+          if (mounted) {
+            Provider.of<GoalStore>(context, listen: false).loadDays(
+              from: DateTime.now().subtract(const Duration(days: 13)),
+              to: DateTime.now(),
+            );
+          }
+        } catch (e) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Save failed: $e')),
+          );
+        } finally {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please fill all required fields correctly.')),
+        );
       }
     } else {
-      print('Form is invalid.');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please correct the errors in the form.')),
+      );
     }
   }
 
@@ -1080,7 +1132,7 @@ class _RecordPageState extends State<RecordPage> {
       onPressed: () {
         // Handle navigation
         if (text == "Record Meal") {
-          // Already on Record Meal page, do nothing or navigate to self
+          Navigator.pushReplacementNamed(context, '/'); // Navigate back to home page
         } else if (text == "History") {
           Navigator.pushNamed(context, '/history');
         }

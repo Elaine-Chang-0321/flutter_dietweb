@@ -15,13 +15,39 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   late final PageController _pageCtrl;
   int _pageIndex = 0;
-
+  final int _daysToLoad = 14; // 載入 14 天的資料
 
   @override
   void initState() {
     super.initState();
-    _pageCtrl = PageController(initialPage: 0);
+    _pageCtrl = PageController(initialPage: _daysToLoad - 1); // 預設顯示今天
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadInitialData();
+    });
   }
+
+  Future<void> _loadInitialData() async {
+    final goalStore = context.read<GoalStore>();
+    final today = DateTime.now();
+    final fromDate = today.subtract(Duration(days: _daysToLoad - 1));
+    await goalStore.loadDays(from: fromDate, to: today);
+    setState(() {
+      _pageIndex = goalStore.days.length - 1; // 確保設置為最新一天
+      _pageCtrl.jumpToPage(_pageIndex);
+    });
+  }
+
+  Future<void> _refreshData() async {
+    final goalStore = context.read<GoalStore>();
+    final today = DateTime.now();
+    final fromDate = today.subtract(Duration(days: _daysToLoad - 1));
+    await goalStore.loadDays(from: fromDate, to: today);
+    setState(() {
+      _pageIndex = goalStore.days.length - 1; // 確保設置為最新一天
+      _pageCtrl.jumpToPage(_pageIndex);
+    });
+  }
+
 
   @override
   void dispose() {
@@ -43,8 +69,11 @@ class _HomePageState extends State<HomePage> {
       horizontalPadding = 72.0;
     }
 
-final df = DateFormat('yyyy/MM/dd');
-    final days = context.watch<GoalStore>().days; // 依你的狀態管理方式取用
+    final df = DateFormat('yyyy/MM/dd');
+    final goalStore = context.watch<GoalStore>();
+    final days = goalStore.days;
+    final isLoading = goalStore.isLoading;
+    final errorMessage = goalStore.errorMessage;
 
     return Scaffold(
       backgroundColor: Colors.transparent, // Make Scaffold background transparent
@@ -136,143 +165,167 @@ final df = DateFormat('yyyy/MM/dd');
                         padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
                         child: Column(
                           children: [
-                            SizedBox(height: 0),
+                            const SizedBox(height: 0),
                             ConstrainedBox(
                               constraints: const BoxConstraints(maxWidth: 1120),
                               child: Column(
                                 children: [
-                                  // 日期 + 左右箭頭
-// 日期列與左右箭頭
-Padding(
- padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
- child: Row(
-   children: [
-     Text(
-       df.format(days[_pageIndex].date),
-       style: Theme.of(context).textTheme.titleLarge,
-     ),
-     const Spacer(),
-     IconButton(
-       tooltip: 'Previous',
-       onPressed: _pageIndex > 0
-           ? () {
-               _pageCtrl.animateToPage(
-                 _pageIndex - 1,
-                 duration: const Duration(milliseconds: 250),
-                 curve: Curves.easeOut,
-               );
-             }
-           : null,
-       icon: const Icon(Icons.chevron_left),
-     ),
-     IconButton(
-       tooltip: 'Next',
-       onPressed: _pageIndex < days.length - 1
-           ? () {
-               _pageCtrl.animateToPage(
-                 _pageIndex + 1,
-                 duration: const Duration(milliseconds: 250),
-                 curve: Curves.easeOut,
-               );
-             }
-           : null,
-       icon: const Icon(Icons.chevron_right),
-     ),
-   ],
- ),
-),
+                                  // 日期列與左右箭頭
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+                                    child: Row(
+                                      children: [
+                                        Text(
+                                          days.isNotEmpty ? df.format(days[_pageIndex].date) : 'Loading...',
+                                          style: Theme.of(context).textTheme.titleLarge,
+                                        ),
+                                        const Spacer(),
+                                        IconButton(
+                                          tooltip: 'Previous',
+                                          onPressed: _pageIndex > 0 && !isLoading
+                                              ? () {
+                                            _pageCtrl.animateToPage(
+                                              _pageIndex - 1,
+                                              duration: const Duration(milliseconds: 250),
+                                              curve: Curves.easeOut,
+                                            );
+                                          }
+                                              : null,
+                                          icon: const Icon(Icons.chevron_left),
+                                        ),
+                                        IconButton(
+                                          tooltip: 'Next',
+                                          onPressed: _pageIndex < days.length - 1 && !isLoading
+                                              ? () {
+                                            _pageCtrl.animateToPage(
+                                              _pageIndex + 1,
+                                              duration: const Duration(milliseconds: 250),
+                                              curve: Curves.easeOut,
+                                            );
+                                          }
+                                              : null,
+                                          icon: const Icon(Icons.chevron_right),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
 
-// 一頁 4 張卡片，橫向排列 (桌面版) 或 2x2 網格 (手機版)
-SizedBox(
- height: isSmallMobile ? 400 : 300,
- child: PageView.builder(
-   controller: _pageCtrl,
-   itemCount: days.length,
-   onPageChanged: (i) => setState(() => _pageIndex = i),
-   itemBuilder: (context, index) {
-     final day = days[index];
-     final goals = day.goals; // 必須是 4 筆資料
+                                  // 載入/錯誤狀態顯示
+                                  if (isLoading)
+                                    const Padding(
+                                      padding: EdgeInsets.all(16.0),
+                                      child: CircularProgressIndicator(),
+                                    )
+                                  else if (errorMessage != null)
+                                    Padding(
+                                      padding: const EdgeInsets.all(16.0),
+                                      child: Column(
+                                        children: [
+                                          Text('Failed to load data: $errorMessage'),
+                                          ElevatedButton(
+                                            onPressed: _refreshData,
+                                            child: const Text('Retry'),
+                                          ),
+                                        ],
+                                      ),
+                                    )
+                                  else if (days.isEmpty)
+                                    const Padding(
+                                      padding: EdgeInsets.all(16.0),
+                                      child: Text('No data available for this period.'),
+                                    )
+                                  else
+                                  // 一頁 4 張卡片，橫向排列 (桌面版) 或 2x2 網格 (手機版)
+                                    SizedBox(
+                                      height: isSmallMobile ? 400 : 300,
+                                      child: PageView.builder(
+                                        controller: _pageCtrl,
+                                        itemCount: days.length,
+                                        onPageChanged: (i) => setState(() => _pageIndex = i),
+                                        itemBuilder: (context, index) {
+                                          final day = days[index];
+                                          final goals = day.goals; // 必須是 4 筆資料
 
-     if (isSmallMobile) {
-       return Padding(
-         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-         child: GridView.builder(
-           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-             crossAxisCount: 2,
-             childAspectRatio: 1.0,
-             crossAxisSpacing: 16,
-             mainAxisSpacing: 16,
-           ),
-           physics: const NeverScrollableScrollPhysics(), // 避免 GridView 自身滾動
-           itemCount: goals.length,
-           itemBuilder: (context, gridIndex) {
-             return GoalCard(
-               title: goals[gridIndex].title,
-               current: goals[gridIndex].current,
-               goal: goals[gridIndex].goal,
-               backgroundColor: goals[gridIndex].backgroundColor,
-               showCircularProgress: !isMobile, // 在手機板不顯示圓形進度條
-               isMobileView: isMobile, // 傳遞 isMobile 判斷給 GoalCard
-             );
-           },
-         ),
-       );
-     } else {
-       return Padding(
-         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-         child: Row(
-           crossAxisAlignment: CrossAxisAlignment.start,
-           children: [
-             Expanded(
-               child: GoalCard(
-                 title: goals[0].title,
-                 current: goals[0].current,
-                 goal: goals[0].goal,
-                 backgroundColor: goals[0].backgroundColor,
-                 showCircularProgress: !isMobile, // 在手機板不顯示圓形進度條
-                 isMobileView: isMobile, // 傳遞 isMobile 判斷給 GoalCard
-               ),
-             ),
-             const SizedBox(width: 24),
-             Expanded(
-               child: GoalCard(
-                 title: goals[1].title,
-                 current: goals[1].current,
-                 goal: goals[1].goal,
-                 backgroundColor: goals[1].backgroundColor,
-                 showCircularProgress: !isMobile, // 在手機板不顯示圓形進度條
-                 isMobileView: isMobile, // 傳遞 isMobile 判斷給 GoalCard
-               ),
-             ),
-             const SizedBox(width: 24),
-             Expanded(
-               child: GoalCard(
-                 title: goals[2].title,
-                 current: goals[2].current,
-                 goal: goals[2].goal,
-                 backgroundColor: goals[2].backgroundColor,
-                 showCircularProgress: !isMobile, // 在手機板不顯示圓形進度條
-                 isMobileView: isMobile, // 傳遞 isMobile 判斷給 GoalCard
-               ),
-             ),
-             const SizedBox(width: 24),
-             Expanded(
-               child: GoalCard(
-                 title: goals[3].title,
-                 current: goals[3].current,
-                 goal: goals[3].goal,
-                 backgroundColor: goals[3].backgroundColor,
-                 showCircularProgress: !isMobile, // 在手機板不顯示圓形進度條
-                 isMobileView: isMobile, // 傳遞 isMobile 判斷給 GoalCard
-               ),
-             ),
-           ],
-         ),
-       );
-     }
-   },
- ),
-),
+                                          if (isSmallMobile) {
+                                            return Padding(
+                                              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                                              child: GridView.builder(
+                                                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                                  crossAxisCount: 2,
+                                                  childAspectRatio: 1.0,
+                                                  crossAxisSpacing: 16,
+                                                  mainAxisSpacing: 16,
+                                                ),
+                                                physics: const NeverScrollableScrollPhysics(), // 避免 GridView 自身滾動
+                                                itemCount: goals.length,
+                                                itemBuilder: (context, gridIndex) {
+                                                  return GoalCard(
+                                                    title: goals[gridIndex].title,
+                                                    current: goals[gridIndex].current,
+                                                    goal: goals[gridIndex].goal,
+                                                    backgroundColor: goals[gridIndex].backgroundColor,
+                                                    showCircularProgress: !isMobile, // 在手機板不顯示圓形進度條
+                                                    isMobileView: isMobile, // 傳遞 isMobile 判斷給 GoalCard
+                                                  );
+                                                },
+                                              ),
+                                            );
+                                          } else {
+                                            return Padding(
+                                              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                                              child: Row(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Expanded(
+                                                    child: GoalCard(
+                                                      title: goals[0].title,
+                                                      current: goals[0].current,
+                                                      goal: goals[0].goal,
+                                                      backgroundColor: goals[0].backgroundColor,
+                                                      showCircularProgress: !isMobile, // 在手機板不顯示圓形進度條
+                                                      isMobileView: isMobile, // 傳遞 isMobile 判斷給 GoalCard
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 24),
+                                                  Expanded(
+                                                    child: GoalCard(
+                                                      title: goals[1].title,
+                                                      current: goals[1].current,
+                                                      goal: goals[1].goal,
+                                                      backgroundColor: goals[1].backgroundColor,
+                                                      showCircularProgress: !isMobile, // 在手機板不顯示圓形進度條
+                                                      isMobileView: isMobile, // 傳遞 isMobile 判斷給 GoalCard
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 24),
+                                                  Expanded(
+                                                    child: GoalCard(
+                                                      title: goals[2].title,
+                                                      current: goals[2].current,
+                                                      goal: goals[2].goal,
+                                                      backgroundColor: goals[2].backgroundColor,
+                                                      showCircularProgress: !isMobile, // 在手機板不顯示圓形進度條
+                                                      isMobileView: isMobile, // 傳遞 isMobile 判斷給 GoalCard
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 24),
+                                                  Expanded(
+                                                    child: GoalCard(
+                                                      title: goals[3].title,
+                                                      current: goals[3].current,
+                                                      goal: goals[3].goal,
+                                                      backgroundColor: goals[3].backgroundColor,
+                                                      showCircularProgress: !isMobile, // 在手機板不顯示圓形進度條
+                                                      isMobileView: isMobile, // 傳遞 isMobile 判斷給 GoalCard
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                          }
+                                        },
+                                      ),
+                                    ),
                                 ],
                               ),
                             ),

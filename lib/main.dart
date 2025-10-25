@@ -4,8 +4,13 @@ import 'package:flutter_dietweb/pages/record_page.dart';
 import 'package:flutter_dietweb/pages/history_page.dart';
 import 'package:flutter_dietweb/stores/goal_store.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-void main() => runApp(const MyApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: ".env");
+  runApp(const MyApp());
+}
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -14,7 +19,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        Provider<GoalStore>(
+        ChangeNotifierProvider<GoalStore>(
           create: (_) => GoalStore(),
         ),
       ],
