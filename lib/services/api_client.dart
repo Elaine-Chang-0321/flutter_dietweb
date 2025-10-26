@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
+import '../models/meal_record.dart';
 
 /// 後端 API base URL（一定要是 dietapi 而不是 elainediet）
 const String _apiBase = 'https://dietapi.zeabur.app';
@@ -60,5 +62,21 @@ class ApiClient {
     }
 
     // 如果需要用回傳的內容，可在這裡 jsonDecode(resp.body)
+  }
+  /// 取得指定日期的所有紀錄
+  static Future<List<MealRecord>> fetchRecordsByDate(DateTime date) async {
+    final String d = _yyyyMmDd(date);
+    final uri = Uri.parse("$_apiBase/records?date=$d");
+
+    final resp = await http.get(uri, headers: {
+      "Accept": "application/json",
+    });
+
+    if (resp.statusCode != 200) {
+      throw Exception("GET /records failed (${resp.statusCode})");
+    }
+
+    final List data = jsonDecode(resp.body) as List;
+    return data.map((e) => MealRecord.fromJson(e)).toList();
   }
 }

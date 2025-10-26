@@ -7,6 +7,181 @@ import 'package:intl/intl.dart'; // For date formatting
 import 'package:flutter_dietweb/services/api_client.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_dietweb/stores/goal_store.dart';
+import '../models/meal_record.dart'; // Added missing import for MealRecord
+
+// DailyRecordsSection Widget
+class DailyRecordsSection extends StatefulWidget {
+  final DateTime date;
+  const DailyRecordsSection({super.key, required this.date});
+
+  @override
+  State<DailyRecordsSection> createState() => _DailyRecordsSectionState();
+}
+
+class _DailyRecordsSectionState extends State<DailyRecordsSection> {
+  late Future<List<MealRecord>> _future;
+  void reload(DateTime d) {
+    setState(() {
+      _future = ApiClient.fetchRecordsByDate(d);
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _future = ApiClient.fetchRecordsByDate(widget.date);
+  }
+
+  @override
+  void didUpdateWidget(covariant DailyRecordsSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.date != widget.date) {
+      reload(widget.date);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    final crossCount = width >= 1024 ? 3 : (width >= 600 ? 2 : 1);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 24),
+        Text("Today’s Records",
+            style: GoogleFonts.fredoka(
+              fontSize: 22, fontWeight: FontWeight.w700, color: const Color(0xFF111827),
+            )),
+        const SizedBox(height: 12),
+        FutureBuilder<List<MealRecord>>(
+          future: _future,
+          builder: (context, snap) {
+            if (snap.connectionState == ConnectionState.waiting) {
+              return const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: CircularProgressIndicator(),
+              );
+            }
+            if (snap.hasError) {
+              return Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text("Failed to load records.", style: GoogleFonts.poppins()),
+              );
+            }
+            final items = snap.data ?? [];
+            if (items.isEmpty) {
+              return Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text("No records for this date.", style: GoogleFonts.poppins()),
+              );
+            }
+
+            return GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: crossCount,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+                childAspectRatio: 0.9,
+              ),
+              itemCount: items.length,
+              itemBuilder: (_, i) => _RecordCard(item: items[i]),
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+// _RecordCard Widget
+class _RecordCard extends StatelessWidget {
+  final MealRecord item;
+  const _RecordCard({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    final protein = item.proteinLow + item.proteinMed + item.proteinHigh + item.proteinXHigh;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(
+          color: Colors.black.withOpacity(0.08),
+          blurRadius: 20,
+          offset: const Offset(0, 10),
+          spreadRadius: -6,
+        )],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          // Thumbnail
+          AspectRatio(
+            aspectRatio: 16 / 9,
+            child: item.imageUrl != null
+              ? Image.network(item.imageUrl!, fit: BoxFit.cover)
+              : Container(
+                  color: const Color(0xFFF3F4F6),
+                  child: const Icon(Icons.image_outlined, size: 48, color: Color(0xFF9CA3AF)),
+                ),
+          ),
+          // Content
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Meal badge + time
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE5E7EB),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(item.meal,
+                        style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      TimeOfDay.fromDateTime(item.createdAt).format(context),
+                      style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF6B7280)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                _row("Whole Grains", item.wholeGrains),
+                _row("Vegetables", item.vegetables),
+                _row("Protein", protein),
+                _row("Junk food", item.junkFood),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _row(String label, int value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6.0),
+      child: Row(
+        children: [
+          Text(label, style: GoogleFonts.poppins(fontSize: 14, color: const Color(0xFF111827))),
+          const Spacer(),
+          Text("$value", style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+}
+
 
 // ImageUploadSection Widget
 class _ImageUploadSection extends StatefulWidget {
@@ -195,6 +370,7 @@ class RecordPage extends StatefulWidget {
 
 class _RecordPageState extends State<RecordPage> {
   final _formKey = GlobalKey<FormState>();
+  final _dailyKey = GlobalKey<_DailyRecordsSectionState>();
   DateTime _selectedDate = DateTime.now();
   String? _selectedMeal;
   bool _isLoading = false;
@@ -425,6 +601,7 @@ class _RecordPageState extends State<RecordPage> {
                             children: [
                               const SizedBox(height: 40),
                               _buildCard(context, screenWidth),
+                              DailyRecordsSection(key: _dailyKey, date: _selectedDate),
                             ],
                           ),
                         ),
@@ -654,6 +831,7 @@ class _RecordPageState extends State<RecordPage> {
                                   setState(() {
                                     _selectedDate = picked;
                                     _dateErrorText = null;
+                                    _dailyKey.currentState?.reload(picked);
                                   });
                                 }
                               },
@@ -1093,6 +1271,7 @@ class _RecordPageState extends State<RecordPage> {
             _proteinExtraHighFatController.text = '';
             _junkFoodController.text = '';
             _proteinTotalWarning = null;
+            _dailyKey.currentState?.reload(_selectedDate);
           });
           // Optionally refresh Home page data
           if (mounted) {
