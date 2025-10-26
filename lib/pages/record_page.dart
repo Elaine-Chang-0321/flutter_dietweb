@@ -201,13 +201,13 @@ class _RecordPageState extends State<RecordPage> {
   bool _isHoveringSubmitButton = false;
 
   // Controllers for numerical input fields
-  final TextEditingController _wholeGrainsController = TextEditingController(text: '0');
-  final TextEditingController _vegetablesController = TextEditingController(text: '0');
-  final TextEditingController _proteinLowFatController = TextEditingController(text: '0');
-  final TextEditingController _proteinMediumFatController = TextEditingController(text: '0');
-  final TextEditingController _proteinHighFatController = TextEditingController(text: '0');
-  final TextEditingController _proteinExtraHighFatController = TextEditingController(text: '0');
-  final TextEditingController _junkFoodController = TextEditingController(text: '0');
+  final TextEditingController _wholeGrainsController = TextEditingController();
+  final TextEditingController _vegetablesController = TextEditingController();
+  final TextEditingController _proteinLowFatController = TextEditingController();
+  final TextEditingController _proteinMediumFatController = TextEditingController();
+  final TextEditingController _proteinHighFatController = TextEditingController();
+  final TextEditingController _proteinExtraHighFatController = TextEditingController();
+  final TextEditingController _junkFoodController = TextEditingController();
 
   String? _dateErrorText;
   String? _wholeGrainsErrorText;
@@ -369,12 +369,17 @@ class _RecordPageState extends State<RecordPage> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  "Diet Web",
-                  style: GoogleFonts.poppins(
-                    color: const Color(0xFF111827),
-                    fontWeight: FontWeight.w800,
-                    fontSize: 20,
+                GestureDetector(
+                  onTap: () {
+                    Navigator.pushReplacementNamed(context, '/');
+                  },
+                  child: Text(
+                    "Diet Web",
+                    style: GoogleFonts.poppins(
+                      color: const Color(0xFF111827),
+                      fontWeight: FontWeight.w800,
+                      fontSize: 20,
+                    ),
                   ),
                 ),
                 Row(
@@ -1005,7 +1010,7 @@ class _RecordPageState extends State<RecordPage> {
 
   String? _numericValidator(String? value, String fieldName, {int min = 0, int max = 15}) {
     if (value == null || value.isEmpty) {
-      return 'This field is required.';
+      return null; // Allow empty values
     }
     final int? parsedValue = int.tryParse(value);
     if (parsedValue == null) {
@@ -1077,13 +1082,13 @@ class _RecordPageState extends State<RecordPage> {
           setState(() {
             _selectedDate = DateTime.now();
             _selectedMeal = null;
-            _wholeGrainsController.text = '0';
-            _vegetablesController.text = '0';
-            _proteinLowFatController.text = '0';
-            _proteinMediumFatController.text = '0';
-            _proteinHighFatController.text = '0';
-            _proteinExtraHighFatController.text = '0';
-            _junkFoodController.text = '0';
+            _wholeGrainsController.text = '';
+            _vegetablesController.text = '';
+            _proteinLowFatController.text = '';
+            _proteinMediumFatController.text = '';
+            _proteinHighFatController.text = '';
+            _proteinExtraHighFatController.text = '';
+            _junkFoodController.text = '';
             _proteinTotalWarning = null;
           });
           // Optionally refresh Home page data

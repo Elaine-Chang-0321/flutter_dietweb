@@ -32,8 +32,12 @@ class _HomePageState extends State<HomePage> {
     final fromDate = today.subtract(Duration(days: _daysToLoad - 1));
     await goalStore.loadDays(from: fromDate, to: today);
     setState(() {
-      _pageIndex = goalStore.days.length - 1; // 確保設置為最新一天
-      _pageCtrl.jumpToPage(_pageIndex);
+      if (goalStore.days.isNotEmpty) {
+        _pageIndex = goalStore.days.length - 1; // 確保設置為最新一天
+        _pageCtrl.jumpToPage(_pageIndex);
+      } else {
+        _pageIndex = 0; // 如果沒有資料，設定為預設索引 0
+      }
     });
   }
 
@@ -43,8 +47,12 @@ class _HomePageState extends State<HomePage> {
     final fromDate = today.subtract(Duration(days: _daysToLoad - 1));
     await goalStore.loadDays(from: fromDate, to: today);
     setState(() {
-      _pageIndex = goalStore.days.length - 1; // 確保設置為最新一天
-      _pageCtrl.jumpToPage(_pageIndex);
+      if (goalStore.days.isNotEmpty) {
+        _pageIndex = goalStore.days.length - 1; // 確保設置為最新一天
+        _pageCtrl.jumpToPage(_pageIndex);
+      } else {
+        _pageIndex = 0; // 如果沒有資料，設定為預設索引 0
+      }
     });
   }
 
