@@ -369,16 +369,19 @@ class _RecordPageState extends State<RecordPage> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                GestureDetector(
-                  onTap: () {
-                    Navigator.pushReplacementNamed(context, '/');
-                  },
-                  child: Text(
-                    "Diet Web",
-                    style: GoogleFonts.poppins(
-                      color: const Color(0xFF111827),
-                      fontWeight: FontWeight.w800,
-                      fontSize: 20,
+                MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigator.pushReplacementNamed(context, '/');
+                    },
+                    child: Text(
+                      "Diet Web",
+                      style: GoogleFonts.poppins(
+                        color: const Color(0xFF111827),
+                        fontWeight: FontWeight.w800,
+                        fontSize: 20,
+                      ),
                     ),
                   ),
                 ),
