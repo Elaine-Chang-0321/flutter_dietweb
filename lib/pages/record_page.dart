@@ -218,7 +218,7 @@ class _RecordPageState extends State<RecordPage> {
   String? _proteinExtraHighFatErrorText;
   String? _junkFoodErrorText;
 
-  // Protein total warning
+  //  total warning
   String? _proteinTotalWarning;
 
   @override
@@ -295,14 +295,16 @@ class _RecordPageState extends State<RecordPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: GoogleFonts.poppins(
-            fontSize: 14,
-            color: const Color(0xFF111827),
+        if (label.isNotEmpty) ...[
+          Text(
+            label,
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              color: const Color(0xFF111827),
+            ),
           ),
-        ),
-        const SizedBox(height: 4),
+          const SizedBox(height: 4),
+        ],
         if (dropdownItems != null)
           DropdownButtonFormField<String>(
             value: selectedDropdownValue,
@@ -415,9 +417,6 @@ class _RecordPageState extends State<RecordPage> {
                             children: [
                               const SizedBox(height: 40),
                               _buildCard(context, screenWidth),
-                              const SizedBox(height: 40),
-                              _buildSubmitButton(),
-                              const SizedBox(height: 40),
                             ],
                           ),
                         ),
@@ -471,15 +470,6 @@ class _RecordPageState extends State<RecordPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Record Meal', // Card Title
-              style: GoogleFonts.fredoka( // 標題字體 Fredoka
-                color: const Color(0xFF111827),
-                fontWeight: FontWeight.w700, // Weight 700–800
-                fontSize: 24,
-              ),
-            ),
-            const SizedBox(height: 24), // Space after title
 
             // Responsive layout for content within the card
             if (isMobile)
@@ -520,7 +510,15 @@ class _RecordPageState extends State<RecordPage> {
                   ),
                 ],
               ),
-          ],
+              const SizedBox(height: 24), // 在表單和按鈕之間添加一些間距
+              Padding(
+                padding: EdgeInsets.only(right: isMobile ? 0 : 0), // 根據需要調整右側間距
+                child: Align(
+                  alignment: Alignment.bottomRight,
+                  child: _buildSubmitButton(width: isMobile ? double.infinity : 150), // 移動端佔滿，非移動端固定寬度
+                ),
+              ),
+            ],
         ),
       ),
     );
@@ -687,7 +685,7 @@ class _RecordPageState extends State<RecordPage> {
                             keyboardType: TextInputType.number,
                             controller: _wholeGrainsController,
                             validator: (value) => _numericValidator(value, 'Whole Grains'),
-                            onChanged: (_) => _updateProteinTotalWarning(),
+                            onChanged: (_) => _updateTotalWarning(),
                           ),
                           const SizedBox(height: 8),
                           _buildTextField(
@@ -696,7 +694,7 @@ class _RecordPageState extends State<RecordPage> {
                             keyboardType: TextInputType.number,
                             controller: _vegetablesController,
                             validator: (value) => _numericValidator(value, 'Vegetables'),
-                            onChanged: (_) => _updateProteinTotalWarning(),
+                            onChanged: (_) => _updateTotalWarning(),
                           ),
                         ],
                       )
@@ -709,7 +707,7 @@ class _RecordPageState extends State<RecordPage> {
                               keyboardType: TextInputType.number,
                               controller: _wholeGrainsController,
                               validator: (value) => _numericValidator(value, 'Whole Grains'),
-                              onChanged: (_) => _updateProteinTotalWarning(),
+                              onChanged: (_) => _updateTotalWarning(),
                             ),
                           ),
                           const SizedBox(width: 24),
@@ -720,24 +718,16 @@ class _RecordPageState extends State<RecordPage> {
                               keyboardType: TextInputType.number,
                               controller: _vegetablesController,
                               validator: (value) => _numericValidator(value, 'Vegetables'),
-                              onChanged: (_) => _updateProteinTotalWarning(),
+                              onChanged: (_) => _updateTotalWarning(),
                             ),
                           ),
                         ],
                       ),
-                const SizedBox(height: 16),
-                // Third Row: Protein servings
+                const SizedBox(height: 8),
+                // Third Row:  servings
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Protein',
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        color: const Color(0xFF111827),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
                     isMobile
                         ? Column(
                             children: [
@@ -746,7 +736,7 @@ class _RecordPageState extends State<RecordPage> {
                                 children: [
                                   Expanded(
                                     child: Text(
-                                      'Low-fat',
+                                      'P-Low fat',
                                       textAlign: TextAlign.center,
                                       style: GoogleFonts.poppins(
                                         fontSize: 14,
@@ -756,7 +746,7 @@ class _RecordPageState extends State<RecordPage> {
                                   ),
                                   Expanded(
                                     child: Text(
-                                      'Med.',
+                                      'P-Med',
                                       textAlign: TextAlign.center,
                                       style: GoogleFonts.poppins(
                                         fontSize: 14,
@@ -766,7 +756,7 @@ class _RecordPageState extends State<RecordPage> {
                                   ),
                                   Expanded(
                                     child: Text(
-                                      'High',
+                                      'P-High',
                                       textAlign: TextAlign.center,
                                       style: GoogleFonts.poppins(
                                         fontSize: 14,
@@ -776,7 +766,7 @@ class _RecordPageState extends State<RecordPage> {
                                   ),
                                   Expanded(
                                     child: Text(
-                                      'Extra High',
+                                      'P-Extra High',
                                       textAlign: TextAlign.center,
                                       style: GoogleFonts.poppins(
                                         fontSize: 14,
@@ -786,7 +776,6 @@ class _RecordPageState extends State<RecordPage> {
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 4),
                               Row(
                                 children: [
                                   Expanded(
@@ -796,7 +785,7 @@ class _RecordPageState extends State<RecordPage> {
                                       keyboardType: TextInputType.number,
                                       controller: _proteinLowFatController,
                                       validator: (value) => _numericValidator(value, 'Low-fat'),
-                                      onChanged: (_) => _updateProteinTotalWarning(),
+                                      onChanged: (_) => _updateTotalWarning(),
                                     ),
                                   ),
                                   const SizedBox(width: 8),
@@ -807,7 +796,7 @@ class _RecordPageState extends State<RecordPage> {
                                       keyboardType: TextInputType.number,
                                       controller: _proteinMediumFatController,
                                       validator: (value) => _numericValidator(value, 'Medium-fat'),
-                                      onChanged: (_) => _updateProteinTotalWarning(),
+                                      onChanged: (_) => _updateTotalWarning(),
                                     ),
                                   ),
                                   const SizedBox(width: 8),
@@ -818,7 +807,7 @@ class _RecordPageState extends State<RecordPage> {
                                       keyboardType: TextInputType.number,
                                       controller: _proteinHighFatController,
                                       validator: (value) => _numericValidator(value, 'High-fat'),
-                                      onChanged: (_) => _updateProteinTotalWarning(),
+                                      onChanged: (_) => _updateTotalWarning(),
                                     ),
                                   ),
                                   const SizedBox(width: 8),
@@ -829,7 +818,7 @@ class _RecordPageState extends State<RecordPage> {
                                       keyboardType: TextInputType.number,
                                       controller: _proteinExtraHighFatController,
                                       validator: (value) => _numericValidator(value, 'Extra-high-fat'),
-                                      onChanged: (_) => _updateProteinTotalWarning(),
+                                      onChanged: (_) => _updateTotalWarning(),
                                     ),
                                   ),
                                 ],
@@ -844,7 +833,7 @@ class _RecordPageState extends State<RecordPage> {
                                 children: [
                                   Expanded(
                                     child: Text(
-                                      'Low-fat',
+                                      'P-Low fat',
                                       textAlign: TextAlign.center,
                                       style: GoogleFonts.poppins(
                                         fontSize: 14,
@@ -854,7 +843,7 @@ class _RecordPageState extends State<RecordPage> {
                                   ),
                                   Expanded(
                                     child: Text(
-                                      'Med.',
+                                      'P-Med',
                                       textAlign: TextAlign.center,
                                       style: GoogleFonts.poppins(
                                         fontSize: 14,
@@ -864,7 +853,7 @@ class _RecordPageState extends State<RecordPage> {
                                   ),
                                   Expanded(
                                     child: Text(
-                                      'High',
+                                      'P-High',
                                       textAlign: TextAlign.center,
                                       style: GoogleFonts.poppins(
                                         fontSize: 14,
@@ -874,7 +863,7 @@ class _RecordPageState extends State<RecordPage> {
                                   ),
                                   Expanded(
                                     child: Text(
-                                      'Extra High',
+                                      'P-Extra High',
                                       textAlign: TextAlign.center,
                                       style: GoogleFonts.poppins(
                                         fontSize: 14,
@@ -884,12 +873,11 @@ class _RecordPageState extends State<RecordPage> {
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 4),
                               GridView.count(
                                 shrinkWrap: true,
                                 crossAxisCount: constraints.maxWidth < 1024 ? 2 : 4, // 2 columns for tablet, 4 for desktop
                                 crossAxisSpacing: 24,
-                                mainAxisSpacing: 24,
+                                mainAxisSpacing: 8,
                                 childAspectRatio: constraints.maxWidth < 1024 ? (constraints.maxWidth / 2 - 24) / 100 : 1, // Adjust aspect ratio for better display
                                 children: [
                                   _buildTextField(
@@ -898,7 +886,7 @@ class _RecordPageState extends State<RecordPage> {
                                     keyboardType: TextInputType.number,
                                     controller: _proteinLowFatController,
                                     validator: (value) => _numericValidator(value, 'Low-fat'),
-                                    onChanged: (_) => _updateProteinTotalWarning(),
+                                    onChanged: (_) => _updateTotalWarning(),
                                   ),
                                   _buildTextField(
                                     label: '', // Label handled by separate Text widget
@@ -906,7 +894,7 @@ class _RecordPageState extends State<RecordPage> {
                                     keyboardType: TextInputType.number,
                                     controller: _proteinMediumFatController,
                                     validator: (value) => _numericValidator(value, 'Medium-fat'),
-                                    onChanged: (_) => _updateProteinTotalWarning(),
+                                    onChanged: (_) => _updateTotalWarning(),
                                   ),
                                   _buildTextField(
                                     label: '', // Label handled by separate Text widget
@@ -914,7 +902,7 @@ class _RecordPageState extends State<RecordPage> {
                                     keyboardType: TextInputType.number,
                                     controller: _proteinHighFatController,
                                     validator: (value) => _numericValidator(value, 'High-fat'),
-                                    onChanged: (_) => _updateProteinTotalWarning(),
+                                    onChanged: (_) => _updateTotalWarning(),
                                   ),
                                   _buildTextField(
                                     label: '', // Label handled by separate Text widget
@@ -922,7 +910,7 @@ class _RecordPageState extends State<RecordPage> {
                                     keyboardType: TextInputType.number,
                                     controller: _proteinExtraHighFatController,
                                     validator: (value) => _numericValidator(value, 'Extra-high-fat'),
-                                    onChanged: (_) => _updateProteinTotalWarning(),
+                                    onChanged: (_) => _updateTotalWarning(),
                                   ),
                                 ],
                               ),
@@ -946,9 +934,9 @@ class _RecordPageState extends State<RecordPage> {
     );
   }
 
-  Widget _buildSubmitButton() {
+  Widget _buildSubmitButton({double? width}) {
     return SizedBox(
-      width: double.infinity,
+      width: width ?? double.infinity,
       child: ElevatedButton(
         onPressed: _isLoading ? null : _submitForm,
         onHover: (value) {
@@ -1029,17 +1017,17 @@ class _RecordPageState extends State<RecordPage> {
     return null;
   }
 
-  void _updateProteinTotalWarning() {
+  void _updateTotalWarning() {
     final int lowFat = int.tryParse(_proteinLowFatController.text) ?? 0;
     final int mediumFat = int.tryParse(_proteinMediumFatController.text) ?? 0;
     final int highFat = int.tryParse(_proteinHighFatController.text) ?? 0;
     final int extraHighFat = int.tryParse(_proteinExtraHighFatController.text) ?? 0;
 
-    final int totalProtein = lowFat + mediumFat + highFat + extraHighFat;
+    final int total = lowFat + mediumFat + highFat + extraHighFat;
 
     setState(() {
-      if (totalProtein > 30) {
-        _proteinTotalWarning = 'Protein total is unusually high.';
+      if (total > 30) {
+        _proteinTotalWarning = ' total is unusually high.';
       } else {
         _proteinTotalWarning = null;
       }
