@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:typed_data';
+import 'package:http_parser/http_parser.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import '../models/meal_record.dart';
@@ -78,5 +80,39 @@ class ApiClient {
 
     final List data = jsonDecode(resp.body) as List;
     return data.map((e) => MealRecord.fromJson(e)).toList();
+  }
+  /// 上傳圖片並回傳後端提供的 URL
+  static Future<String> uploadImage(Uint8List imageBytes) async {
+    final uri = Uri.parse('$_apiBase/upload-image');
+
+    final request = http.MultipartRequest('POST', uri)
+      ..files.add(http.MultipartFile.fromBytes(
+        'image',
+        imageBytes,
+        filename: 'upload.jpg',
+        contentType: MediaType('image', 'jpeg'),
+      ));
+
+    try {
+      final streamedResponse = await request.send();
+      final resp = await http.Response.fromStream(streamedResponse);
+
+      if (resp.statusCode != 200) {
+        throw Exception('POST $uri failed: ${resp.statusCode}\n${resp.body}');
+      }
+
+      final data = jsonDecode(resp.body);
+      if (data is Map<String, dynamic> && data.containsKey('url')) {
+        String url = data['url'] as String;
+        if (url.startsWith('http://')) {
+          url = url.replaceFirst('http://', 'https://');
+        }
+        return url;
+      } else {
+        throw Exception('Invalid response format: missing "url" field');
+      }
+    } catch (e) {
+      throw Exception('uploadImage failed: $e');
+    }
   }
 }

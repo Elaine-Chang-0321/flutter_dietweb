@@ -186,7 +186,8 @@ class _RecordCard extends StatelessWidget {
 // ImageUploadSection Widget
 class _ImageUploadSection extends StatefulWidget {
   final double screenWidth;
-  const _ImageUploadSection({super.key, required this.screenWidth});
+  final ValueChanged<String?> onUrlChanged;
+  const _ImageUploadSection({super.key, required this.screenWidth, required this.onUrlChanged});
 
   @override
   State<_ImageUploadSection> createState() => _ImageUploadSectionState();
@@ -195,92 +196,87 @@ class _ImageUploadSection extends StatefulWidget {
 class _ImageUploadSectionState extends State<_ImageUploadSection> {
   Uint8List? _imageBytes;
   bool _isHovering = false;
+  String? _uploadedUrl;
+  bool _uploading = false;
 
   Future<void> _pickImage() async {
     final image = await ImagePickerWeb.getImageAsBytes();
     if (image != null) {
       setState(() {
         _imageBytes = image;
+        _uploadedUrl = null; // reset old url after choosing new image
       });
+    }
+  }
+
+  Future<void> _uploadImage() async {
+    if (_imageBytes == null) return;
+    setState(() => _uploading = true);
+    try {
+      final url = await ApiClient.uploadImage(_imageBytes!);
+      setState(() {
+        _uploadedUrl = url;
+      });
+      widget.onUrlChanged(url);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Image uploaded successfully!')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Image upload failed: $e')),
+      );
+    } finally {
+      setState(() => _uploading = false);
     }
   }
 
   void _removeImage() {
     setState(() {
       _imageBytes = null;
+      _uploadedUrl = null;
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final bool isMobile = widget.screenWidth < 600;
-    final double containerHeight = isMobile ? 240 : 320; // RWD height
+    final double containerHeight = isMobile ? 240 : 320;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16.0),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.15),
-            offset: const Offset(0, 4),
-            blurRadius: 12,
-            spreadRadius: -2,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16.0),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.15),
+                offset: const Offset(0, 4),
+                blurRadius: 12,
+                spreadRadius: -2,
+              ),
+            ],
           ),
-        ],
-      ),
-      child: DragTarget<Uint8List>( // Corrected type
-        onWillAcceptWithDetails: (details) {
-          setState(() {
-            _isHovering = true;
-          });
-          return true; // Accept any data that is dragged over
-        },
-        onLeave: (data) {
-          setState(() {
-            _isHovering = false;
-          });
-        },
-        onAcceptWithDetails: (details) {
-          setState(() {
-            _imageBytes = details.data;
-            _isHovering = false;
-          });
-        },
-        builder: (context, candidateData, rejectedData) {
-          return InkWell(
+          child: InkWell(
             onTap: _pickImage,
-            onHover: (hovering) {
-              setState(() {
-                _isHovering = hovering;
-              });
-            },
             borderRadius: BorderRadius.circular(16.0),
             child: DottedBorder(
               borderType: BorderType.RRect,
               radius: const Radius.circular(16),
-              padding: EdgeInsets.zero,
               dashPattern: const [6, 6],
-              color: _isHovering || candidateData.isNotEmpty
-                  ? const Color(0xFF3B82F6) // 焦點色
+              color: _isHovering
+                  ? const Color(0xFF3B82F6)
                   : Colors.transparent,
               strokeWidth: 2,
               child: Container(
                 height: containerHeight,
                 padding: const EdgeInsets.all(24.0),
-                decoration: BoxDecoration(
-                  color: Colors.white, // 背景色改為白色
-                  borderRadius: BorderRadius.circular(16.0),
-                ),
                 child: _imageBytes == null
                     ? Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(
-                          Icons.cloud_upload_outlined, // 或 Icons.image_outlined
-                          size: 48,
-                          color: const Color(0xFF111827).withOpacity(0.75), // 次級文字顏色
-                          ),
+                          const Icon(Icons.cloud_upload_outlined, size: 48, color: Color(0xFF111827)),
                           const SizedBox(height: 16),
                           Text(
                             'Drop or click to upload your meal photo',
@@ -288,16 +284,7 @@ class _ImageUploadSectionState extends State<_ImageUploadSection> {
                             style: GoogleFonts.poppins(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
-                              color: const Color(0xFF111827), // 文字主色
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'JPG/PNG • up to 5MB',
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.poppins(
-                              fontSize: 13,
-                              color: const Color(0xFF111827).withOpacity(0.75), // 次級文字顏色
+                              color: const Color(0xFF111827),
                             ),
                           ),
                         ],
@@ -305,47 +292,35 @@ class _ImageUploadSectionState extends State<_ImageUploadSection> {
                     : Stack(
                         fit: StackFit.expand,
                         children: [
-                          Image.memory(
-                            _imageBytes!,
-                            fit: BoxFit.cover,
-                          ),
+                          Image.memory(_imageBytes!, fit: BoxFit.cover),
                           Positioned(
                             top: 8,
                             right: 8,
                             child: Row(
                               children: [
                                 ElevatedButton(
-                                  onPressed: _pickImage,
+                                  onPressed: _uploading ? null : _uploadImage,
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF111827), // 主按鈕底色
-                                    foregroundColor: Colors.white, // 白字
-                                    minimumSize: Size.zero,
+                                    backgroundColor: const Color(0xFF111827),
+                                    foregroundColor: Colors.white,
                                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10), // 輸入框圓角 10px
-                                    ),
                                   ),
-                                  child: const Text(
-                                    'Replace',
-                                    style: TextStyle(fontSize: 12),
-                                  ),
+                                  child: _uploading
+                                      ? const SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                        )
+                                      : const Text('上傳圖片', style: TextStyle(fontSize: 12)),
                                 ),
                                 const SizedBox(width: 8),
                                 OutlinedButton(
                                   onPressed: _removeImage,
                                   style: OutlinedButton.styleFrom(
-                                    foregroundColor: const Color(0xFF111827).withOpacity(0.75), // 次級文字顏色
-                                    side: const BorderSide(color: Color(0xFFE5E7EB)), // 分隔線／邊框
-                                    minimumSize: Size.zero,
+                                    side: const BorderSide(color: Color(0xFFE5E7EB)),
                                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10), // 輸入框圓角 10px
-                                    ),
                                   ),
-                                  child: const Text(
-                                    'Remove',
-                                    style: TextStyle(fontSize: 12),
-                                  ),
+                                  child: const Text('刪除', style: TextStyle(fontSize: 12)),
                                 ),
                               ],
                             ),
@@ -354,9 +329,14 @@ class _ImageUploadSectionState extends State<_ImageUploadSection> {
                       ),
               ),
             ),
-          );
-        },
-      ),
+          ),
+        ),
+        if (_uploadedUrl != null) ...[
+          const SizedBox(height: 8),
+          Text('已上傳圖片 URL：$_uploadedUrl',
+              style: GoogleFonts.poppins(fontSize: 13, color: Colors.blueAccent)),
+        ],
+      ],
     );
   }
 }
@@ -375,6 +355,7 @@ class _RecordPageState extends State<RecordPage> {
   String? _selectedMeal;
   bool _isLoading = false;
   bool _isHoveringSubmitButton = false;
+  String? _uploadedUrl; // 新增狀態以儲存圖片 URL
 
   // Controllers for numerical input fields
   final TextEditingController _wholeGrainsController = TextEditingController();
@@ -660,7 +641,10 @@ class _RecordPageState extends State<RecordPage> {
             if (isMobile)
               Column(
                 children: [
-                  _ImageUploadSection(screenWidth: screenWidth), // Use the new widget
+                  _ImageUploadSection(
+                    screenWidth: screenWidth,
+                    onUrlChanged: (url) => setState(() => _uploadedUrl = url),
+                  ), // Use the new widget
                   const SizedBox(height: 24), // Space between sections
                   _buildFormSection(screenWidth),
                 ],
@@ -671,7 +655,10 @@ class _RecordPageState extends State<RecordPage> {
                 children: [
                   Flexible(
                     flex: 5,
-                    child: _ImageUploadSection(screenWidth: screenWidth), // Use the new widget
+                    child: _ImageUploadSection(
+                      screenWidth: screenWidth,
+                      onUrlChanged: (url) => setState(() => _uploadedUrl = url),
+                    ), // Use the new widget
                   ),
                   const SizedBox(width: 24), // Gap between columns
                   Flexible(
@@ -686,7 +673,10 @@ class _RecordPageState extends State<RecordPage> {
                 children: [
                   Flexible(
                     flex: 6,
-                    child: _ImageUploadSection(screenWidth: screenWidth), // Use the new widget
+                    child: _ImageUploadSection(
+                      screenWidth: screenWidth,
+                      onUrlChanged: (url) => setState(() => _uploadedUrl = url),
+                    ), // Use the new widget
                   ),
                   const SizedBox(width: 32), // Gap between columns
                   Flexible(
@@ -1224,7 +1214,6 @@ class _RecordPageState extends State<RecordPage> {
 
   Future<void> _submitForm() async {
     setState(() {
-      // Date validation
       if (_selectedDate.isAfter(DateTime.now())) {
         _dateErrorText = 'Date cannot be in the future.';
       } else {
@@ -1232,73 +1221,85 @@ class _RecordPageState extends State<RecordPage> {
       }
     });
 
-    if (_formKey.currentState?.validate() ?? false) {
-      if (_dateErrorText == null && _selectedMeal != null) {
-        setState(() {
-          _isLoading = true;
-        });
-
-        try {
-          await ApiClient.createRecord(
-            {
-              'date': DateFormat('yyyy-MM-dd').format(_selectedDate),
-              'meal': _selectedMeal!,
-              'whole_grains': _toInt(_wholeGrainsController.text),
-              'vegetables': _toInt(_vegetablesController.text),
-              'protein_low': _toInt(_proteinLowFatController.text),
-              'protein_med': _toInt(_proteinMediumFatController.text),
-              'protein_high': _toInt(_proteinHighFatController.text),
-              'protein_xhigh': _toInt(_proteinExtraHighFatController.text),
-              'junk_food': _toInt(_junkFoodController.text),
-              // 'note': null, // assuming no note controller for now
-              // 'image_url': null, // assuming no image URL for now
-            },
-          );
-
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Saved successfully!')),
-          );
-          // Clear form fields after successful submission
-          setState(() {
-            _selectedDate = DateTime.now();
-            _selectedMeal = null;
-            _wholeGrainsController.text = '';
-            _vegetablesController.text = '';
-            _proteinLowFatController.text = '';
-            _proteinMediumFatController.text = '';
-            _proteinHighFatController.text = '';
-            _proteinExtraHighFatController.text = '';
-            _junkFoodController.text = '';
-            _proteinTotalWarning = null;
-            _dailyKey.currentState?.reload(_selectedDate);
-          });
-          // Optionally refresh Home page data
-          if (mounted) {
-            Provider.of<GoalStore>(context, listen: false).loadDays(
-              from: DateTime.now().subtract(const Duration(days: 13)),
-              to: DateTime.now(),
-            );
-          }
-        } catch (e) {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Save failed: $e')),
-          );
-        } finally {
-          setState(() {
-            _isLoading = false;
-          });
-        }
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please fill all required fields correctly.')),
-        );
-      }
-    } else {
+    if (!(_formKey.currentState?.validate() ?? false)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please correct the errors in the form.')),
       );
+      return;
+    }
+
+    if (_dateErrorText != null || _selectedMeal == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill all required fields correctly.')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final payload = {
+        'date': DateFormat('yyyy-MM-dd').format(_selectedDate),
+        'meal': _selectedMeal!,
+        'whole_grains': _toInt(_wholeGrainsController.text),
+        'vegetables': _toInt(_vegetablesController.text),
+        'protein_low': _toInt(_proteinLowFatController.text),
+        'protein_med': _toInt(_proteinMediumFatController.text),
+        'protein_high': _toInt(_proteinHighFatController.text),
+        'protein_xhigh': _toInt(_proteinExtraHighFatController.text),
+        'junk_food': _toInt(_junkFoodController.text),
+      };
+
+      // 處理圖片上傳邏輯
+      if (_uploadedUrl != null) {
+        payload['image_url'] = _uploadedUrl!;
+      } else if (_ImageUploadSectionState()._uploadedUrl != null) {
+        payload['image_url'] = _ImageUploadSectionState()._uploadedUrl!;
+      } else if (_ImageUploadSectionState()._imageBytes != null) {
+        try {
+          final url = await ApiClient.uploadImage(_ImageUploadSectionState()._imageBytes!);
+          payload['image_url'] = url;
+        } catch (e) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Upload or save failed: $e')),
+          );
+          setState(() => _isLoading = false);
+          return;
+        }
+      }
+
+      await ApiClient.createRecord(payload);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Saved successfully!')),
+      );
+
+      setState(() {
+        _selectedDate = DateTime.now();
+        _selectedMeal = null;
+        _wholeGrainsController.clear();
+        _vegetablesController.clear();
+        _proteinLowFatController.clear();
+        _proteinMediumFatController.clear();
+        _proteinHighFatController.clear();
+        _proteinExtraHighFatController.clear();
+        _junkFoodController.clear();
+        _proteinTotalWarning = null;
+        _dailyKey.currentState?.reload(_selectedDate);
+      });
+
+      Provider.of<GoalStore>(context, listen: false).loadDays(
+        from: DateTime.now().subtract(const Duration(days: 13)),
+        to: DateTime.now(),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Upload or save failed: $e')),
+      );
+    } finally {
+      setState(() => _isLoading = false);
     }
   }
 
